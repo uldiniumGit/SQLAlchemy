@@ -1,11 +1,20 @@
 from sqlalchemy import Column, Integer, String, create_engine, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-
+from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 
 engine = create_engine('sqlite:///orm.sqlite', echo=False)
 
 Base = declarative_base()
+
+class Tag(Base):
+    __tablename__ = 'tags'  # обычно таблицы во множественном числе
+    id = Column(Integer, primary_key=True)
+    tag = Column(String, unique=True)
+
+    # связь к новостям
+    news = relationship('News', back_populates='tag')
+
+    def __repr__(self):
+        return f"<Tag(id={self.id}, tag='{self.tag}')>"
 
 
 class News(Base):
@@ -14,57 +23,36 @@ class News(Base):
     news = Column(String)
     time = Column(String)
     link = Column(String)
-    tag_id = Column(Integer, ForeignKey('tag.id'))
+    tag_id = Column(Integer, ForeignKey('tags.id'))
 
-    def __init__(self, news, time, link, tag_id):
-        self.news = news
-        self.time = time
-        self.link = link
-        self.tag_id = tag_id
+    tag = relationship('Tag', back_populates='news')
 
-    def __str__(self):
-        return f'{self.news} {self.time} {self.link} {self.tag_id}'
+    def __repr__(self):
+        return f"<News(id={self.id}, news='{self.news}', time='{self.time}', link='{self.link}', tag_id={self.tag_id})>"
 
 
-class Tags(Base):
-    __tablename__ = 'tag'
-    id = Column(Integer, primary_key=True)
-    tag = Column(String, unique=True)
-
-    def __init__(self, tag):
-        self.tag = tag
-
-    def __str__(self):
-        return self.tag
-
-
-# Создание таблицы
+# Создаем таблицы в базе
 Base.metadata.create_all(engine)
 
-# Заполняем таблицы
 Session = sessionmaker(bind=engine)
-
-# create a Session
 session = Session()
 
-# Теги
-session.add_all([Tags('life'), Tags('work')])
+# Добавим теги
+tag_life = Tag(tag='life')
+tag_work = Tag(tag='work')
 
+session.add_all([tag_life, tag_work])
 session.commit()
 
-
-news = News('Упал ноль', '14:01', 'vk.com', 1)
-
-# Добавление данных
-session.add(news)
-
+# Добавим новость, связав с тегом
+news_item = News(news='Упал ноль', time='14:01', link='vk.com', tag_id=tag_life.id)
+session.add(news_item)
 session.commit()
 
-# Выборка данных
-# 1. Все новости, которые есть в базе
-news = session.query(News).all()
-# Класс запроса
-print(type(news))
+# Получаем все новости
+all_news = session.query(News).all()
+print(type(all_news))  # <class 'list'>
 
-for i in news:
-    print(i)
+for news in all_news:
+    print(news)
+    print(f"Тег новости: {news.tag}")  # благодаря relationship можно получить объект тега
