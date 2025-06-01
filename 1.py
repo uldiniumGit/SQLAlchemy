@@ -1,27 +1,21 @@
-from sqlalchemy import Column, Integer, String, create_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-engine = create_engine('sqlite:///:memory:', echo=True)
+# Создание сессии
+Session = sessionmaker(bind=engine)
+session = Session()
 
-Base = declarative_base()
+# Создаем новых пользователей
+user1 = User('alice', 'Alice Wonderland', 'password123')
+user2 = User('bob', 'Bob Builder', 'secure456')
 
+# Добавляем пользователей в сессию
+session.add(user1)
+session.add(user2)
 
-class User(Base):
-    __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    fullname = Column(String)
-    password = Column(String)
+# Фиксируем изменения в базе
+session.commit()
 
-    def __init__(self, name, fullname, password):
-        self.name = name
-        self.fullname = fullname
-        self.password = password
-
-    def __repr__(self):
-        return "<User('%s','%s','%s')>" % (self.name, self.fullname, self.password)
-
-
-# Создание таблицы
-Base.metadata.create_all(engine)
-
+# Выбираем всех пользователей
+users = session.query(User).all()
+for user in users:
+    print(user)
